@@ -39,16 +39,16 @@ void EnvelopeCallback(uint16_t **output, size_t size)
      *  Attack, Decay, and Release will be set between instantaneous to 1 second
      *  Sustain will be set between 0 and 1 
      */
-    float knob_attack = patch.GetAdcValue(CV_1);
+    float knob_attack = patch.GetAdcValue(CV_2);
     envelope.SetAttackTime(knob_attack);
 
-    float knob_decay = patch.GetAdcValue(CV_2);
+    float knob_decay = patch.GetAdcValue(CV_4);
     envelope.SetDecayTime(knob_decay);
 
-    float knob_sustain = patch.GetAdcValue(CV_3);
+    float knob_sustain = patch.GetAdcValue(CV_6);
     envelope.SetSustainLevel(knob_sustain);
 
-    float knob_release = patch.GetAdcValue(CV_4);
+    float knob_release = patch.GetAdcValue(CV_8);
     envelope.SetReleaseTime(knob_release);
 
     for(size_t i = 0; i < size; i++)

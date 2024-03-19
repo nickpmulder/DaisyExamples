@@ -6,7 +6,8 @@ using namespace patch_sm;
 using namespace daisysp;
 
 DaisyPatchSM patch;
-Switch       button;
+Switch       button1;
+Switch       button2;
 
 #define kBuffSize 48000 * 60 // 60 seconds at 48kHz
 
@@ -22,21 +23,23 @@ void AudioCallback(AudioHandle::InputBuffer  in,
 {
     // Process the controls
     patch.ProcessAllControls();
-    button.Debounce();
+    button1.Debounce();
+    button2.Debounce();
 
     // Set in and loop gain from CV_1 and CV_2 respectively
-    float in_level   = patch.GetAdcValue(CV_1);
-    float loop_level = patch.GetAdcValue(CV_2);
+    float in_level   = patch.GetAdcValue(CV_2);
+    float loop_level = patch.GetAdcValue(CV_4);
 
     //if you press the button, toggle the record state
-    if(button.RisingEdge())
+    if(button1.RisingEdge()|| button2.RisingEdge())
     {
         looper_l.TrigRecord();
         looper_r.TrigRecord();
     }
 
+
     // if you hold the button longer than 1000 ms (1 sec), clear the loop
-    if(button.TimeHeldMs() >= 1000.f)
+    if(button1.TimeHeldMs() >= 1000.f)
     {
         looper_l.Clear();
         looper_r.Clear();
@@ -72,7 +75,8 @@ int main(void)
     looper_r.Init(buffer_r, kBuffSize);
 
     // Init the button
-    button.Init(patch.B7);
+    button1.Init(patch.D6);
+    button2.Init(patch.B10);
 
     // Start the audio callback
     patch.StartAudio(AudioCallback);

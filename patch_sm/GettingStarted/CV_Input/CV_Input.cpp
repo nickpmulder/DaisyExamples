@@ -20,7 +20,7 @@ int main(void)
         patch.ProcessAllControls();
 
         /** Read from CV_1 (-1, 1) */
-        float value = patch.GetAdcValue(CV_5);
+        float value = patch.GetAdcValue(CV_2);
 
         /** If the Adc value is greater than 0V... */
         if(value > 0)

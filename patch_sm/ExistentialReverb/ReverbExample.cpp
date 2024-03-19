@@ -1,12 +1,15 @@
 #include "daisy_patch_sm.h"
 #include "daisysp.h"
 
+
 using namespace daisy;
 using namespace daisysp;
 using namespace patch_sm;
 
+
 DaisyPatchSM patch;
 ReverbSc     reverb;
+
 
 void AudioCallback(AudioHandle::InputBuffer  in,
                    AudioHandle::OutputBuffer out,
@@ -16,17 +19,22 @@ void AudioCallback(AudioHandle::InputBuffer  in,
 
     /** Update Params with the four knobs */
     float time_knob = patch.GetAdcValue(CV_8);
-    float time      = fmap(time_knob, 0.1f, 1.0f);
+    float time      = fmap(time_knob, 0.4, 0.95);
 
     float damp_knob = patch.GetAdcValue(CV_2);
-    float damp      = fmap(damp_knob, 1000.f, 19000.f, Mapping::LOG);
+    float damp      = fmap(damp_knob, 100.f, 19000.f, Mapping::LOG);
 
-    float in_level = patch.GetAdcValue(CV_4);
+    // float crush_knob = patch.GetAdcValue(CV_6);
+    // float crushAmount      = fmap(crush_knob, 1, 50);
 
-    float send_level = patch.GetAdcValue(CV_6);
+    float send_level = patch.GetAdcValue(CV_4);
 
-    reverb.SetFeedback(time*1);
+    float in_level = 1-send_level;
+
+    reverb.SetFeedback(time);
     reverb.SetLpFreq(damp);
+
+ //   crush.SetGain(crushAmount);
 
     for(size_t i = 0; i < size; i++)
     {
@@ -35,15 +43,20 @@ void AudioCallback(AudioHandle::InputBuffer  in,
         float sendl = IN_L[i] * send_level;
         float sendr = IN_R[i] * send_level;
         float wetl, wetr;
-        reverb.Process(sendl, sendr, &wetl, &wetr);
-        OUT_L[i] = dryl + wetl;
-        OUT_R[i] = dryr + wetr;
+        float send1l, send1r;
 
-        patch.WriteCvOut(CV_OUT_1, dryl*6);
-        patch.WriteCvOut(CV_OUT_2, wetl*6);
+
+
+        reverb.Process(sendl, sendr, &wetl, &wetr);
+        OUT_L[i] = dryl*0.3 + wetl*0.3;
+        OUT_R[i] = dryr*0.3 + wetr*0.3;
+
+        patch.WriteCvOut(CV_OUT_1, wetl*6);
+        patch.WriteCvOut(CV_OUT_2, wetr*6);
 
     }
 }
+
 
 int main(void)
 {
