@@ -10,8 +10,8 @@ using namespace patch_sm;
 DaisyPatchSM patch;
 Overdrive drive;
 Wavefolder fold;
-Parameter  cutoff_ctrl, res_ctrl, drive_ctrl;
-Svf svf1, svf2;
+Decimator decimator;
+//Svf svf1, svf2;
 
 void AudioCallback(AudioHandle::InputBuffer  in,
                    AudioHandle::OutputBuffer out,
@@ -20,28 +20,31 @@ void AudioCallback(AudioHandle::InputBuffer  in,
     patch.ProcessAnalogControls();
 
     /** Update Params with the four knobs */
-    float freq_knob = patch.GetAdcValue(CV_8);
-    float freqAmount      = fmap(freq_knob, 50.f, patch.AudioSampleRate()/3, Mapping::LOG);
 
-    float drive_knob = patch.GetAdcValue(CV_2);
+
+    float drive_knob = patch.GetAdcValue(CV_8);
     float driveAmount      = fmap(drive_knob, 0.25, 1);
 
-    float res_knob = patch.GetAdcValue(CV_4);
-    float resAmount      = fmap(res_knob, 0.1, 0.99);
+    float downsample_knob = patch.GetAdcValue(CV_2);
+    float downsampleAmount      = fmap(downsample_knob, 0, 3);
+
+    float crush_knob = patch.GetAdcValue(CV_4);
+    float crushAmount      = fmap(crush_knob, 0, 1);
 
     float fold_knob = patch.GetAdcValue(CV_6);
     float foldAmount      = fmap(fold_knob, 1, 20);
 
    // float send_level = patch.GetAdcValue(CV_4);
-
+  //  decimator.SetBitcrushFactor(crushAmount);
+    decimator.SetDownsampleFactor(downsampleAmount);
     drive.SetDrive(driveAmount);
     fold.SetGain(foldAmount);
 
-    svf1.SetFreq(freqAmount);
-    svf1.SetRes(resAmount);
+    // svf1.SetFreq(freqAmount);
+    // svf1.SetRes(resAmount);
 
-    svf2.SetFreq(freqAmount);
-    svf2.SetRes(resAmount);
+    // svf2.SetFreq(freqAmount);
+    // svf2.SetRes(resAmount);
 
 
     for(size_t i = 0; i < size; i++)
@@ -54,11 +57,11 @@ void AudioCallback(AudioHandle::InputBuffer  in,
         float send2L= drive.Process(send1L);
         float send2R= drive.Process(send1R);
 
-        svf1.Process(send2L);
-        svf2.Process(send2R);
+        float send3L= decimator.Process(send2L);
+        float send3R= decimator.Process(send2R);
 
-        float send3L= svf1.Low();;
-        float send3R= svf2.Low();;
+        // float send3L= svf1.Low();;
+        // float send3R= svf2.Low();;
 
 
         OUT_L[i] = send3L;
@@ -81,8 +84,8 @@ int main(void)
     samplerate = patch.AudioSampleRate();
 
     //Initialize filter
-    svf1.Init(samplerate);
-    svf2.Init(samplerate);
+    // svf1.Init(samplerate);
+    // svf2.Init(samplerate);
 
     patch.StartAudio(AudioCallback);
     while(1) {}

@@ -1,3 +1,4 @@
+//cronch firmware 1.1
 #include "daisy_patch_sm.h"
 #include "daisysp.h"
 
@@ -9,6 +10,7 @@ using namespace daisysp;
 DaisyPatchSM patch;
 Oscillator   osc_a, osc_b, osc_c;
 WhiteNoise   noise;
+Wavefolder fold;
 AdEnv pitch_envelope;
 AdEnv amp_envelope;
 AdEnv amp_envelope_noise;
@@ -22,6 +24,9 @@ float fine_tune =0;
 float coarse_tune =0;
 float waveForm=1;
 float noiseAmount=0;
+float osc_amp=0;
+float LEDlevel=0;
+
 
 void AudioCallback(AudioHandle::InputBuffer  in,
                    AudioHandle::OutputBuffer out,
@@ -49,15 +54,20 @@ void AudioCallback(AudioHandle::InputBuffer  in,
 
 if (waveForm==1){
     osc_a.SetWaveform(Oscillator::WAVE_SIN);
-                drive.SetDrive(.2);  
+                drive.SetDrive(.3);  
                  //noiseAmount = .0;
-
+                 osc_amp=1.5;
+                 fold.SetGain(1);
+                LEDlevel=5;
 }
 
 if (waveForm==2){
     osc_a.SetWaveform(Oscillator::WAVE_TRI);
-                drive.SetDrive(.3);    
+                drive.SetDrive(.4);    
                  //noiseAmount = .1;
+                 osc_amp=2;
+                 fold.SetGain(1);
+                LEDlevel=3;
 
 
 }
@@ -66,19 +76,29 @@ if (waveForm==3){
     osc_a.SetWaveform(Oscillator::WAVE_TRI);
             drive.SetDrive(.4);    
              //noiseAmount = .2;
+                 osc_amp=1;
+                fold.SetGain(2.5);
+                LEDlevel=4;
+
 
 }
 if (waveForm==4){
     osc_a.SetWaveform(Oscillator::WAVE_TRI);
             drive.SetDrive(.5);    
              //noiseAmount = .4;
+                 osc_amp=1;
+                 fold.SetGain(3);
+                LEDlevel=2.8;
 
 }
 
 if (waveForm==5){
     osc_a.SetWaveform(Oscillator::WAVE_TRI);
-            drive.SetDrive(.8);    
+            drive.SetDrive(1);    
              //noiseAmount = .7;
+                 osc_amp=1;
+                 fold.SetGain(1);
+                LEDlevel=3;
 
 }
 
@@ -141,22 +161,22 @@ float noise_knob = patch.GetAdcValue(CV_1);
     float env_amp=amp_envelope.Process();
    
 
-    //osc_a.SetAmp(env_amp);
+   // osc_a.SetAmp(osc_amp);
     //noise.SetAmp(env_amp);
 
 
         float sigA = osc_a.Process();
 
 
-        float sigL= drive.Process(sigA+noise.Process()*noiseAmount);
+        float sigL= fold.Process(drive.Process(sigA+noise.Process()*noiseAmount));
         
 
  
-        OUT_L[i]  = (sigL)*env_amp;
+        OUT_L[i]  = (sigL)*env_amp*osc_amp;
 
 
-        patch.WriteCvOut(CV_OUT_1, (sigL)*env_amp*5);
-        patch.WriteCvOut(CV_OUT_2, (sigL)*env_amp*5);
+        patch.WriteCvOut(CV_OUT_1, (sigL)*env_amp*LEDlevel);
+        patch.WriteCvOut(CV_OUT_2, (sigL)*env_amp*LEDlevel);
 
     }
 }

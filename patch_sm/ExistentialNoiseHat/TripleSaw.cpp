@@ -11,17 +11,14 @@ Oscillator   osc_a, osc_b, osc_c;
 WhiteNoise   noise;
 AdEnv pitch_envelope;
 AdEnv amp_envelope;
-AdEnv amp_envelope_noise;
 Overdrive drive;
 Switch button1;
 Switch button2;
 Switch button3;
-Switch button4;
 float peak_tune =0;
 float fine_tune =0;
 float coarse_tune =0;
 float waveForm=1;
-float noiseAmount=0;
 
 void AudioCallback(AudioHandle::InputBuffer  in,
                    AudioHandle::OutputBuffer out,
@@ -31,7 +28,6 @@ void AudioCallback(AudioHandle::InputBuffer  in,
     button1.Debounce();
     button2.Debounce();
     button3.Debounce();
-    button4.Debounce();
 
 
 
@@ -42,47 +38,31 @@ void AudioCallback(AudioHandle::InputBuffer  in,
         pitch_envelope.Trigger();
                 }
 
- if(button1.RisingEdge() || button4.FallingEdge())
-       { waveForm++;
-        if (waveForm == 6){waveForm = 1;}
-                }
+//  if(button1.RisingEdge() )
+//        { waveForm++;
+//         if (waveForm == 4){waveForm = 1;}
+//                 }
 
-if (waveForm==1){
-    osc_a.SetWaveform(Oscillator::WAVE_SIN);
-                drive.SetDrive(.2);  
-                 //noiseAmount = .0;
+// if (waveForm==1){
+//     osc_a.SetWaveform(Oscillator::WAVE_SIN);
+//                 drive.SetDrive(.3);  
 
-}
+// }
 
-if (waveForm==2){
-    osc_a.SetWaveform(Oscillator::WAVE_TRI);
-                drive.SetDrive(.3);    
-                 //noiseAmount = .1;
+// if (waveForm==2){
+//     osc_a.SetWaveform(Oscillator::WAVE_TRI);
+//                 drive.SetDrive(.4);    
 
+// }
 
-}
+// if (waveForm==3){
+//     osc_a.SetWaveform(Oscillator::WAVE_TRI);
+//             drive.SetDrive(.5);    
 
-if (waveForm==3){
-    osc_a.SetWaveform(Oscillator::WAVE_TRI);
-            drive.SetDrive(.4);    
-             //noiseAmount = .2;
+// }
 
-}
-if (waveForm==4){
-    osc_a.SetWaveform(Oscillator::WAVE_TRI);
-            drive.SetDrive(.5);    
-             //noiseAmount = .4;
-
-}
-
-if (waveForm==5){
-    osc_a.SetWaveform(Oscillator::WAVE_TRI);
-            drive.SetDrive(.8);    
-             //noiseAmount = .7;
-
-}
-
-
+float knob_fine = patch.GetAdcValue(CV_1);
+     fine_tune = fmap(knob_fine, 0, 10);
 
 float knob_coarse = patch.GetAdcValue(CV_5);
      coarse_tune = fmap(knob_coarse, 0, 100);
@@ -102,9 +82,6 @@ float cv_voct = patch.GetAdcValue(CV_8);
 
 
 
-float noise_knob = patch.GetAdcValue(CV_1);
-    float noiseAmount    = fmap(noise_knob, 0,4);
-
     float knob_pitch_decay = patch.GetAdcValue(CV_2);
     pitch_envelope.SetTime(ADENV_SEG_ATTACK, .01);
     pitch_envelope.SetTime(ADENV_SEG_DECAY, knob_pitch_decay);
@@ -116,8 +93,7 @@ float noise_knob = patch.GetAdcValue(CV_1);
     amp_envelope.SetTime(ADENV_SEG_DECAY, knob_amp_decay);
 
 
-    amp_envelope_noise.SetTime(ADENV_SEG_ATTACK, .01);
-    amp_envelope_noise.SetTime(ADENV_SEG_DECAY, knob_amp_decay/2);
+
 
   // envelope.SetCurve(20);
     
@@ -130,33 +106,46 @@ float noise_knob = patch.GetAdcValue(CV_1);
 
     float midi_nn = fclamp(fine_tune + coarse_tune + voct+(env_pitch*peak_tune), 0.f, 127.f);
     float freq_a  = mtof(midi_nn);
+    float freq_b  = freq_a*.87;
+    float freq_c  = freq_a*.23;
+
+    osc_a.SetWaveform(Oscillator::WAVE_SQUARE);
+    osc_b.SetWaveform(Oscillator::WAVE_SQUARE);
+    osc_c.SetWaveform(Oscillator::WAVE_SQUARE);
 
 
-
+    /** Set all three oscillators' frequencies */
     osc_a.SetFreq(freq_a);
-
+    osc_b.SetFreq(freq_b);
+    osc_c.SetFreq(freq_c);
 
 
 
     float env_amp=amp_envelope.Process();
-   
+    osc_a.SetAmp(env_amp);
+    osc_b.SetAmp(env_amp);
+    osc_c.SetAmp(env_amp);
 
-    //osc_a.SetAmp(env_amp);
-    //noise.SetAmp(env_amp);
+    noise.SetAmp(env_amp);
+
+    //osc_b.SetAmp(env_out);
+    //osc_c.SetAmp(env_out);
+       // float sigA = osc_a.Process()+osc_b.Process()+osc_c.Process() ;
+float sigA = noise.Process();
+      //  float sigB = osc_b.Process();
+       // float sigC = osc_c.Process();
+
+        float sigL= drive.Process(sigA);
+        float sigR= drive.Process(sigA);
+
+        float sigL1 = (sigL);
+        float sigR1 = (sigR);
+        OUT_L[i]  = sigL1;
+        OUT_R[i]  = sigR1;
 
 
-        float sigA = osc_a.Process();
-
-
-        float sigL= drive.Process(sigA+noise.Process()*noiseAmount);
-        
-
- 
-        OUT_L[i]  = (sigL)*env_amp;
-
-
-        patch.WriteCvOut(CV_OUT_1, (sigL)*env_amp*5);
-        patch.WriteCvOut(CV_OUT_2, (sigL)*env_amp*5);
+        patch.WriteCvOut(CV_OUT_1, sigL*5);
+        patch.WriteCvOut(CV_OUT_2, sigR*5);
 
     }
 }
@@ -167,21 +156,18 @@ int main(void)
 
 
     button1.Init(patch.D6);
-    button2.Init(patch.D7);
-    button3.Init(patch.B10);
-    button4.Init(patch.D4);
+    button2.Init(patch.B10);
+    button3.Init(patch.D7);
 
     amp_envelope.Init(48000);
     pitch_envelope.Init(48000);
-    amp_envelope_noise.Init(48000);
-
     noise.Init();
 
 
 
     osc_a.Init(patch.AudioSampleRate());
-   // osc_b.Init(patch.AudioSampleRate());
-    //osc_c.Init(patch.AudioSampleRate());
+    osc_b.Init(patch.AudioSampleRate());
+    osc_c.Init(patch.AudioSampleRate());
     
     
 
